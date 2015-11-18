@@ -104,15 +104,20 @@ dataCalParsed = dataCalParsed(1+offsetStart:calCount-offsetEnd,:);
 
 % Organize data into a structure
 dataRaw = struct('t',T*dataRawParsed(:,1),...
-    'AX',dataRawParsed(:,2:7:219), 'AY',dataRawParsed(:,3:7:220),...
-    'AZ',dataRawParsed(:,4:7:221), 'GX',dataRawParsed(:,5:7:222),...
-    'GY',dataRawParsed(:,6:7:223), 'GZ',dataRawParsed(:,7:7:224),...
+    'AX',dataRawParsed(:,2:7:219),...
+    'AY',dataRawParsed(:,3:7:220),...
+    'AZ',dataRawParsed(:,4:7:221),...
+    'GX',dataRawParsed(:,5:7:222),...
+    'GY',dataRawParsed(:,6:7:223),...
+    'GZ',dataRawParsed(:,7:7:224),...
     'Temp',dataRawParsed(:,8:7:225));
 
-dataCal = struct('t',T*dataCalParsed(:,1),'AX',dataCalParsed(:,2),...
-    'AY',dataCalParsed(:,3), 'AZ',dataCalParsed(:,4),...
-    'GX',dataCalParsed(:,5), 'GY',dataCalParsed(:,6),...
-    'GZ',dataCalParsed(:,7), 'Temp',dataCalParsed(:,8));
+dataCal = struct('t',T*dataCalParsed(:,1),...   % Time vector
+    'DTheta',dataCalParsed(:,2:4),...           % Latest delta theta
+    'DV',dataCalParsed(:,5:7),...               % Latest delta V
+    'Q',dataCalParsed(:,8:11),...               % Attitude quaternion
+    'Temp',dataCalParsed(:,12),...              % Avg. temperature
+    'AccumV',dataCalParsed(:,13:15));           % Accumulated velocity
 
 % Plot raw data
 if(plotOn == 1)
@@ -137,27 +142,7 @@ if(plotOn == 1)
     title('Specific Force - Z'); xlabel('Time (s)'); ylabel('milli-g');
 end
 
-% Plot calibrated data
 if(plotOn == 1)
-    figure;
-    subplot(3,2,1);
-    plot(dataCal.t, dataCal.GX);
-    title('Gyro - X'); xlabel('Time (s)'); ylabel('deg/s');
-    subplot(3,2,3);
-    plot(dataCal.t, dataCal.GY);
-    title('Gyro - Y'); xlabel('Time (s)'); ylabel('deg/s');
-    subplot(3,2,5);
-    plot(dataCal.t, dataCal.GZ);
-    title('Gyro - Z'); xlabel('Time (s)'); ylabel('deg/s');
-    subplot(3,2,2);
-    plot(dataCal.t, dataCal.AX);
-    title('Specific Force - X'); xlabel('Time (s)'); ylabel('milli-g');
-    subplot(3,2,4);
-    plot(dataCal.t, dataCal.AY);
-    title('Specific Force - Y'); xlabel('Time (s)'); ylabel('milli-g');
-    subplot(3,2,6);
-    plot(dataCal.t, dataCal.AZ);
-    title('Specific Force - Z'); xlabel('Time (s)'); ylabel('milli-g');
+    % TODO - Plotting of calibrated data. Put into separate file
 end
-
 end

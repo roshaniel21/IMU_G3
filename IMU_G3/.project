@@ -49,7 +49,7 @@
 	<variableList>
 		<variable>
 			<name>SW_ROOT</name>
-			<value>$%7BPARENT-1-CCS_INSTALL_ROOT%7D/TivaWare_C_Series-2.1.1.71</value>
+			<value>file:/C:/ti/TivaWare_C_Series-2.1.0.12573</value>
 		</variable>
 	</variableList>
 </projectDescription>

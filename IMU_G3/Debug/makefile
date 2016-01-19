@@ -23,8 +23,8 @@ ORDERED_OBJS += \
 "./fatfs/mmc-ek-tm4c1294xl.obj" \
 "../tm4c1294ncpdt.cmd" \
 $(GEN_CMDS__FLAG) \
+-l"driverlib.lib" \
 -l"libc.a" \
--l"C:\ti\TivaWare_C_Series-2.1.0.12573\driverlib\ccs\Debug\driverlib.lib" \
 
 -include ../makefile.init
 
@@ -151,7 +151,7 @@ all: IMU_G3.out
 IMU_G3.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: ARM Linker'
-	"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.5/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -g --gcc --define=ccs="ccs" --define=UART_BUFFERED --define=TARGET_IS_TM4C129_RA0 --define=PART_TM4C1294NCPDT --diag_wrap=off --diag_warning=225 --display_error_number -z -m"IMU_G3.map" --heap_size=0 --stack_size=1024 -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.5/lib" -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.5/include" --reread_libs --display_error_number --diag_wrap=off --warn_sections --xml_link_info="IMU_G3_linkInfo.xml" --rom_model -o "IMU_G3.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.5/bin/armcl" -mv7M4 --code_state=16 --float_support=FPv4SPD16 --abi=eabi -me -g --gcc --define=ccs="ccs" --define=UART_BUFFERED --define=TARGET_IS_TM4C129_RA0 --define=PART_TM4C1294NCPDT --diag_wrap=off --diag_warning=225 --display_error_number -z -m"IMU_G3.map" --heap_size=0 --stack_size=1024 -i"C:/ti/TivaWare_C_Series-2.1.0.12573/driverlib/ccs/Debug/" -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.5/lib" -i"C:/ti/ccsv6/tools/compiler/ti-cgt-arm_5.2.5/include" --reread_libs --display_error_number --diag_wrap=off --warn_sections --xml_link_info="IMU_G3_linkInfo.xml" --rom_model -o "IMU_G3.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -127,7 +127,6 @@ void ConfigureIMUs(uint32_t systemClock) {
 			// Set enable at that bit to 0
 			if(++counter == COUNTER_MAX) {
 				DisableIMU(i);
-
 			}
 
 			// Wait 10 ms

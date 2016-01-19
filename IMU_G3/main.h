@@ -21,7 +21,7 @@
 #define CAL_PKT_SIZE                (58)
 
 // IMU sampling rate (MUST BE INTEGER MULTIPLE OF UPDATE_RATE)
-#define SAMPLE_RATE         (250)
+#define SAMPLE_RATE         (200)
 
 // Digital conversion factors for accelerometer and gyro
 const float K_A = 0.000061035;

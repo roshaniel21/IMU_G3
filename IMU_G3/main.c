@@ -103,10 +103,12 @@ float dataAvgd[3][NUM_IMU_VALUES] = {0};
 // OUTPUTS
 // Integrated attitude quaternion
 float q[4] = {1,0,0,0};
-// Non-destruct delta thetas
-float nddTheta[3] = {0,0,0};
-// Non-destruct delta velocity
-float nddV[3] = {0,0,0};
+// Latest delta theta
+float dTheta[3] = {0,0,0};
+// Delta theta represented as quaternion
+float q1[4] = {1,0,0,0};
+// Latest delta velocity
+float dV[3] = {0,0,0};
 // Accumulated velocity
 float accVel[3] = {0,0,0};
 // Average temperature of the sensors
@@ -393,7 +395,7 @@ void ConfigureTimers(void) {
 
 }
 
-void InitializeCalibrationCoefficients() {
+void LoadCalibrationCoefficients() {
 
 	// TODO: Load calibration coefficients from SD card
 
@@ -619,32 +621,26 @@ void AverageData() {
 }
 
 void IntegrateGyroData() {
-	float sigma[3] = {0};	// Integrated gyro
-	float q1[4] = {0};		// Quaternion update
 	float qProp[4] = {0};   // Propagated attitude quaternion
 
-	// Integrate gyro output using Simpson's rule
-	sigma[X] = (Ts/3)*(dataAvgd[2][GX] + 4*dataAvgd[1][GX] + dataAvgd[0][GX]);
-	sigma[Y] = (Ts/3)*(dataAvgd[2][GY] + 4*dataAvgd[1][GY] + dataAvgd[0][GY]);
-	sigma[Z] = (Ts/3)*(dataAvgd[2][GZ] + 4*dataAvgd[1][GZ] + dataAvgd[0][GZ]);
-	// Add change in angle to non-destruct delta thetas
-	nddTheta[X] += sigma[X];
-	nddTheta[Y] += sigma[Y];
-	nddTheta[Z] += sigma[Z];
+	// Integrate gyro output using Simpson's rule to get the delta theta
+	dTheta[X] = (Ts/3)*(dataAvgd[2][GX] + 4*dataAvgd[1][GX] + dataAvgd[0][GX]);
+	dTheta[Y] = (Ts/3)*(dataAvgd[2][GY] + 4*dataAvgd[1][GY] + dataAvgd[0][GY]);
+	dTheta[Z] = (Ts/3)*(dataAvgd[2][GZ] + 4*dataAvgd[1][GZ] + dataAvgd[0][GZ]);
 
-	// Compute norm of sigma
-	float phi_sq = sigma[X]*sigma[X] + sigma[Y]*sigma[Y] + sigma[Z]*sigma[Z];
+	// Compute norm of delta theta
+	float phi_sq = dTheta[X]*dTheta[X] + dTheta[Y]*dTheta[Y] + dTheta[Z]*dTheta[Z];
 
-	// Create quaternion which represents rotation of by angle phi
+	// Convert to quaternion representation
 	if(phi_sq > 1E-12) {
 	    // Approximate cosine by Taylor series up to 2nd order terms
 		q1[0] = 1 - 0.125*phi_sq;
 
 	    // Approximate sine by Taylor series up to 2nd order terms
 		float a = 0.5 - phi_sq/48.0;
-		q1[1] = sigma[X]*a;
-		q1[2] = sigma[Y]*a;
-		q1[3] = sigma[Z]*a;
+		q1[1] = dTheta[X]*a;
+		q1[2] = dTheta[Y]*a;
+		q1[3] = dTheta[Z]*a;
 	}
 
 	// Propagate the attitude quaternion
@@ -660,10 +656,10 @@ void IntegrateGyroData() {
 	q[2] = qProp[2]/qPropNorm;
 	q[3] = qProp[3]/qPropNorm;
 
-	// Store non-destruct delta thetas
-	processedData.dTheta[X] = nddTheta[X];
-	processedData.dTheta[Y] = nddTheta[Y];
-	processedData.dTheta[Z] = nddTheta[Z];
+	// Store latest delta thetas
+	processedData.dTheta[X] = dTheta[X];
+	processedData.dTheta[Y] = dTheta[Y];
+	processedData.dTheta[Z] = dTheta[Z];
 
 	// Store attitude quaternion
 	processedData.Q[X] = q[1];
@@ -680,27 +676,40 @@ void IntegrateGyroData() {
 }
 
 void IntegrateAccelerometerData() {
-	float dv[3] = {0};	// Integrated gyro
+	float w[3] = {0};   // dV reprsented in inertial frame
 
 	// Integrate accelerometer output using Simpson's rule
-	dv[X] = (Ts/3)*(dataAvgd[2][AX] + 4*dataAvgd[1][AX] + dataAvgd[0][AX]);
-	dv[Y] = (Ts/3)*(dataAvgd[2][AY] + 4*dataAvgd[1][AY] + dataAvgd[0][AY]);
-	dv[Z] = (Ts/3)*(dataAvgd[2][AZ] + 4*dataAvgd[1][AZ] + dataAvgd[0][AZ]);
+	dV[X] = (Ts/3)*(dataAvgd[2][AX] + 4*dataAvgd[1][AX] + dataAvgd[0][AX]);
+	dV[Y] = (Ts/3)*(dataAvgd[2][AY] + 4*dataAvgd[1][AY] + dataAvgd[0][AY]);
+	dV[Z] = (Ts/3)*(dataAvgd[2][AZ] + 4*dataAvgd[1][AZ] + dataAvgd[0][AZ]);
 
-	// Add change in velocity to non-destruct delta velocity
-	nddV[X] += dv[X];
-	nddV[Y] += dv[Y];
-	nddV[Z] += dv[Z];
+	// Transform accelerations to inertial frame (w = qvq*
+	w[X] = 2*(dV[X]*(q1[0]*q1[0] + q1[1]*q1[1] - 0.5) +
+		      dV[Y]*(q1[1]*q1[2] - q1[0]*q1[3]) +
+			  dV[Z]*(q1[1]*q1[3] + q1[0]*q1[2]));
+
+	w[Y] = 2*(dV[X]*(q1[1]*q1[2] + q1[0]*q1[3]) +
+			  dV[Y]*(q1[0]*q1[0] + q1[2]*q1[2] - 0.5) +
+			  dV[Z]*(q1[2]*q1[3] - q1[0]*q1[1]));
+
+	w[Z] = 2*(dV[X]*(q1[1]*q1[3] - q1[0]*q1[2]) +
+			  dV[Y]*(q1[2]*q1[3] + q1[0]*q1[1]) +
+			  dV[Z]*(q1[0]*q1[0] + q1[3]*q1[3] - 0.5));
+
+	// Accumulate the velocity
+	accVel[X] += w[X];
+	accVel[Y] += w[Y];
+	accVel[Z] += w[Z];
 
 	// Store quaternion in processed data
-	processedData.dV[X] = nddV[X];
-	processedData.dV[Y] = nddV[Y];
-	processedData.dV[Z] = nddV[Z];
+	processedData.dV[X] = dV[X];
+	processedData.dV[Y] = dV[Y];
+	processedData.dV[Z] = dV[Z];
 
 	// Store accumulated velocity
-	processedData.accumV[X] = dv[X];
-	processedData.accumV[Y] = dv[Y];
-	processedData.accumV[Z] = dv[Z];
+	processedData.accumV[X] = accVel[X];
+	processedData.accumV[Y] = accVel[Y];
+	processedData.accumV[Z] = accVel[Z];
 
 	// Store latest specific force
 	processedData.specificForce[X] = dataAvgd[2][AX];
@@ -714,6 +723,7 @@ void IntegrateAccelerometerData() {
 
 
 void WriteDataToRegisters(uint32_t recordTimeStamp) {
+	// TODO: Change dTheta and dV to accelerometer and angular velocity output
 
 	RegWriteFloat32(REG_DELTA_THETA_X_1, processedData.dTheta[X]);
 	RegWriteFloat32(REG_DELTA_THETA_Y_1, processedData.dTheta[Y]);
@@ -814,7 +824,7 @@ void ProcessDataRecord(uint16_t k) {
 	}
 
 	// Output if ready
-	if(outputCount == GetOutputRateDivider()) {
+	if(outputCount >= GetOutputRateDivider()) {
 		outputCount = 0;
 
 		// Write data to I2C registers if in nominal mode
@@ -909,7 +919,7 @@ void UpdateIMUSettings(void) {
 #endif
 		// Force data acquisition off
 		CLEAR_BIT(reg[REG_IMU_DAQ], 0);
-		// Clear SD status flags
+		// Clear 'SD data ready' flag and 'SD EOF detected' flags
 		ClearSDReadyFlag();
 		ClearSDEOFFlag();
 
@@ -933,7 +943,7 @@ int main(void) {
     ConfigureIMUs(systemClock);
 	ConfigureTimers();
 
-	InitializeCalibrationCoefficients();
+	LoadCalibrationCoefficients();
 
 	// Mount the file system for the SD card
 	SDMount();
